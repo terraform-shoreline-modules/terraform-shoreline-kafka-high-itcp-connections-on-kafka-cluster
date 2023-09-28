@@ -1,0 +1,102 @@
+{
+  "name": "high_itcp_connections_on_kafka_cluster",
+  "description": "In this incident type, the software engineer needs to monitor the ITCP (Internet Protocol Control Protocol) connections on the Kafka cluster. If the number of ITCP connections becomes too high, it can cause a CPU spike, which can lead to performance issues or even system failure. Therefore, it's important to regularly check for high ITCP connections on the Kafka cluster and take preventive measures to avoid any potential problems.",
+  "params": [
+    {
+      "name": "NEW_BROKER_COUNT",
+      "value": ""
+    },
+    {
+      "name": "_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_",
+      "value": ""
+    },
+    {
+      "name": "BROKER_NODES_LIST",
+      "value": ""
+    },
+    {
+      "name": "BROKER_NODE",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## High ITCP Connections on Kafka Cluster\nIn this incident type, the software engineer needs to monitor the ITCP (Internet Protocol Control Protocol) connections on the Kafka cluster. If the number of ITCP connections becomes too high, it can cause a CPU spike, which can lead to performance issues or even system failure. Therefore, it's important to regularly check for high ITCP connections on the Kafka cluster and take preventive measures to avoid any potential problems."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the number of established connections on the Kafka broker"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ss -s | grep kafka_broker | awk '{print $1 \" \" $2}'`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the number of ITCP connections on the Kafka broker"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ss -s | grep kafka_broker | grep \"tcp.*itcp\" | awk '{print $1 \" \" $2}'`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the number of ITCP connections on each Kafka broker node"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `for ${BROKER_NODE} in ${BROKER_NODES_LIST}; do echo \"ITCP connections on $BROKER_NODE:\"; ssh $BROKER_NODE \"ss -s | grep kafka_broker | grep 'tcp.*itcp' | awk '{print \\$1 \\\" \\\" \\$2}'\"; done`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the current CPU usage on each Kafka broker node"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `for ${BROKER_NODE} in ${BROKER_NODES_LIST}; do echo \"CPU usage on $BROKER_NODE:\"; ssh $BROKER_NODE \"ps -eo pcpu,pid,user,args | grep kafka_broker | grep -v grep\"; done`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Increase the number of Kafka brokers to distribute load across the cluster."
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_increase_broker_count($NEW_BROKER_COUNT, $_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_)"
+    }
+  ]
+}
