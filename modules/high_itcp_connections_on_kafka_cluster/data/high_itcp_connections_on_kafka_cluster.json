@@ -3,11 +3,11 @@
   "description": "In this incident type, the software engineer needs to monitor the ITCP (Internet Protocol Control Protocol) connections on the Kafka cluster. If the number of ITCP connections becomes too high, it can cause a CPU spike, which can lead to performance issues or even system failure. Therefore, it's important to regularly check for high ITCP connections on the Kafka cluster and take preventive measures to avoid any potential problems.",
   "params": [
     {
-      "name": "NEW_BROKER_COUNT",
+      "name": "_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_",
       "value": ""
     },
     {
-      "name": "_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_",
+      "name": "NEW_BROKER_COUNT",
       "value": ""
     },
     {
@@ -96,7 +96,7 @@
       "name": "cell_11",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "host | host_name=$HOST_NAME | invoke_increase_broker_count($NEW_BROKER_COUNT, $_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_)"
+      "content": "host | host_name=$HOST_NAME | invoke_kafka_broker_update($_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_, $NEW_BROKER_COUNT)"
     }
   ]
 }
