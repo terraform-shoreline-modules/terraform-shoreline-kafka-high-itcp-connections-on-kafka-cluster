@@ -1,21 +1,29 @@
 {
   "name": "high_itcp_connections_on_kafka_cluster",
-  "description": "In this incident type, the software engineer needs to monitor the ITCP (Internet Protocol Control Protocol) connections on the Kafka cluster. If the number of ITCP connections becomes too high, it can cause a CPU spike, which can lead to performance issues or even system failure. Therefore, it's important to regularly check for high ITCP connections on the Kafka cluster and take preventive measures to avoid any potential problems.",
+  "description": "When there are high ITCP connections on a Kafka cluster, it means that there are many connections that have been established but not yet closed. This can cause a number of issues, including decreased performance and potential instability of the cluster. It is important to identify and address these connections in a timely manner to prevent further issues.",
   "params": [
     {
-      "name": "_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_",
+      "name": "CURRENT_NODE_ID",
       "value": ""
     },
     {
-      "name": "NEW_BROKER_COUNT",
+      "name": "NUMBER_OF_NEW_NODES_TO_ADD",
       "value": ""
     },
     {
-      "name": "BROKER_NODES_LIST",
+      "name": "CURRENT_NODE_HOSTNAME",
       "value": ""
     },
     {
-      "name": "BROKER_NODE",
+      "name": "KAFKA_PORT",
+      "value": ""
+    },
+    {
+      "name": "KAFKA_PID",
+      "value": ""
+    },
+    {
+      "name": "PATH_TO_KAFKA_HOME",
       "value": ""
     },
     {
@@ -36,67 +44,115 @@
       "name": "cell_1",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## High ITCP Connections on Kafka Cluster\nIn this incident type, the software engineer needs to monitor the ITCP (Internet Protocol Control Protocol) connections on the Kafka cluster. If the number of ITCP connections becomes too high, it can cause a CPU spike, which can lead to performance issues or even system failure. Therefore, it's important to regularly check for high ITCP connections on the Kafka cluster and take preventive measures to avoid any potential problems."
+      "content": "## High ITCP Connections on Kafka Cluster\nWhen there are high ITCP connections on a Kafka cluster, it means that there are many connections that have been established but not yet closed. This can cause a number of issues, including decreased performance and potential instability of the cluster. It is important to identify and address these connections in a timely manner to prevent further issues."
     },
     {
       "name": "cell_2",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Check the number of established connections on the Kafka broker"
+      "content": "## Check current number of established ITCP connections"
     },
     {
       "name": "cell_3",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ss -s | grep kafka_broker | awk '{print $1 \" \" $2}'`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `netstat -anp | grep ${KAFKA_PORT} | grep -c ESTABLISHED`"
     },
     {
       "name": "cell_4",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Check the number of ITCP connections on the Kafka broker"
+      "content": "## Check the maximum number of allowed ITCP connections"
     },
     {
       "name": "cell_5",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ss -s | grep kafka_broker | grep \"tcp.*itcp\" | awk '{print $1 \" \" $2}'`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `sysctl net.ipv4.tcp_max_syn_backlog`"
     },
     {
       "name": "cell_6",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Check the number of ITCP connections on each Kafka broker node"
+      "content": "## Check the current number of half-open ITCP connections"
     },
     {
       "name": "cell_7",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `for ${BROKER_NODE} in ${BROKER_NODES_LIST}; do echo \"ITCP connections on $BROKER_NODE:\"; ssh $BROKER_NODE \"ss -s | grep kafka_broker | grep 'tcp.*itcp' | awk '{print \\$1 \\\" \\\" \\$2}'\"; done`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ss -s | grep \"TCP:\" | awk '{print \"Half-open connections: \" $4}'`"
     },
     {
       "name": "cell_8",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Check the current CPU usage on each Kafka broker node"
+      "content": "## Check the number of sockets in TIME_WAIT state"
     },
     {
       "name": "cell_9",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `for ${BROKER_NODE} in ${BROKER_NODES_LIST}; do echo \"CPU usage on $BROKER_NODE:\"; ssh $BROKER_NODE \"ps -eo pcpu,pid,user,args | grep kafka_broker | grep -v grep\"; done`"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `netstat -an | grep ${KAFKA_PORT} | grep TIME_WAIT | wc -l`"
     },
     {
       "name": "cell_10",
       "type": "MARKDOWN",
       "enabled": true,
-      "content": "## Increase the number of Kafka brokers to distribute load across the cluster."
+      "content": "## Check the number of sockets in CLOSE_WAIT state"
     },
     {
       "name": "cell_11",
       "type": "OP_LANG",
       "enabled": true,
-      "content": "host | host_name=$HOST_NAME | invoke_kafka_broker_update($_NEW_BROKER_COUNT_I_DO_ECHO_BROKER_ID_I_, $NEW_BROKER_COUNT)"
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `netstat -an | grep ${KAFKA_PORT} | grep CLOSE_WAIT | wc -l`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the current number of file descriptors used by Kafka processes"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `lsof | grep ${KAFKA_PID} | wc -l`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the current amount of memory used by Kafka processes"
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ps -p ${KAFKA_PID} -o rss=`"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the current amount of CPU usage by Kafka processes"
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `top -p ${KAFKA_PID}`"
+    },
+    {
+      "name": "cell_18",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Increase Kafka Cluster capacity: One of the possible reasons for high ITCP connections is that the Kafka cluster is reaching its capacity limit. In this case, we can consider increasing the capacity of the Kafka cluster to handle more connections."
+    },
+    {
+      "name": "cell_19",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_add_kafka_nodes($CURRENT_NODE_ID, $NUMBER_OF_NEW_NODES_TO_ADD, $CURRENT_NODE_HOSTNAME, $PATH_TO_KAFKA_HOME)"
     }
   ]
 }
